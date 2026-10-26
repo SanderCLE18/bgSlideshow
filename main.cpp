@@ -170,9 +170,11 @@ public:
     ~RestoreImage() {
         try{
             omarchy::restore();
-            setClionOpaque(false);
         } catch (std::exception &e){
             std::println(stderr, "could not restore! Error: {}", e.what());
+        }
+        if (!setClionOpaque(false)){
+            std::println(stderr, "could not reset CLion opacity!");
         }
     }
 
