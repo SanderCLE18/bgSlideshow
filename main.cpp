@@ -277,7 +277,9 @@ int main(int argc, char** argv) {
     try{
         RestoreImage guard;
         setClionOpaque(true);
+        int sig = 0;
         while (running_) {
+
             for (std::size_t i = 0;i < images.size(); i++){
                 omarchy::set(images[i].native());
                 std::size_t size = 0;
@@ -298,7 +300,7 @@ int main(int argc, char** argv) {
                         std::println(stderr, "could not restore! Error: {}", e.what());
                     }
                 }
-                int sig;
+
                 while ((sig = sigtimedwait(&sigs, nullptr, &interval)) == -1 && errno == EINTR) { }
 
                 if (sig > 0) {
@@ -314,6 +316,9 @@ int main(int argc, char** argv) {
                         std::println(stderr, "could not restore! Error: {}", e.what());
                     }
                 }
+            }
+            if (sig > 0) {
+                break;
             }
             images = getImages(std::span<const char* const>(argv + 2, static_cast<std::size_t>(argc - 2)));
         }
