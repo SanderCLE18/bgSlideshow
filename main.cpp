@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cctype>
 #include <cerrno>
 #include <charconv>
@@ -233,6 +234,7 @@ public:
 }
 
 int main(int argc, char** argv) {
+    std::atomic running_{true};
     if (argc < 3){
         std::println(stderr, "usage: {} <seconds> <directory|image>...", argv[0]);
         return 2;
@@ -275,43 +277,47 @@ int main(int argc, char** argv) {
     try{
         RestoreImage guard;
         setClionOpaque(true);
-        for (std::size_t i = 0;; i = (i + 1) % images.size()){
-            omarchy::set(images[i].native());
-            std::size_t size = 0;
-            try{
-                size = getElementCount(std::span<const char* const>(argv + 2, static_cast<std::size_t>(argc - 2)));
-            } catch (std::exception &e){
-                omarchy::restore();
-            } catch (...){
-                std::println(stderr, "could not restore! ");
-            }
-            if (images.size() != size && size != 0) {
-                images = getImages(std::span<const char* const>(argv + 2, static_cast<std::size_t>(argc - 2)));
-            }
-            if (size == 0) {
+        while (running_) {
+            for (std::size_t i = 0;i < images.size(); i++){
+                omarchy::set(images[i].native());
+                std::size_t size = 0;
                 try{
-                    omarchy::restore();
+                    size = getElementCount(std::span<const char* const>(argv + 2, static_cast<std::size_t>(argc - 2)));
                 } catch (std::exception &e){
-                    std::println(stderr, "could not restore! Error: {}", e.what());
+                    omarchy::restore();
+                } catch (...){
+                    std::println(stderr, "could not restore! ");
                 }
-            }
-            int sig;
-            while ((sig = sigtimedwait(&sigs, nullptr, &interval)) == -1 && errno == EINTR) { }
+                if (images.size() != size && size != 0) {
+                    images = getImages(std::span<const char* const>(argv + 2, static_cast<std::size_t>(argc - 2)));
+                }
+                if (size == 0) {
+                    try{
+                        omarchy::restore();
+                    } catch (std::exception &e){
+                        std::println(stderr, "could not restore! Error: {}", e.what());
+                    }
+                }
+                int sig;
+                while ((sig = sigtimedwait(&sigs, nullptr, &interval)) == -1 && errno == EINTR) { }
 
-            if (sig > 0) {
-                break;
-            }
-            if (images.size() != size && size != 0) {
-                images = getImages(std::span<const char* const>(argv + 2, static_cast<std::size_t>(argc - 2)));
-            }
-            if (size == 0) {
-                try{
-                    omarchy::restore();
-                } catch (std::exception &e){
-                    std::println(stderr, "could not restore! Error: {}", e.what());
+                if (sig > 0) {
+                    break;
+                }
+                if (images.size() != size && size != 0) {
+                    images = getImages(std::span<const char* const>(argv + 2, static_cast<std::size_t>(argc - 2)));
+                }
+                if (size == 0) {
+                    try{
+                        omarchy::restore();
+                    } catch (std::exception &e){
+                        std::println(stderr, "could not restore! Error: {}", e.what());
+                    }
                 }
             }
+            images = getImages(std::span<const char* const>(argv + 2, static_cast<std::size_t>(argc - 2)));
         }
+
     } catch (std::exception &e){
         std::println(stderr, "Error: {}", e.what());
         return 1;
