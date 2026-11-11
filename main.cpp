@@ -307,6 +307,10 @@ int main(int argc, char** argv) {
                 if (sig == SIGINT || sig == SIGTERM) {
                     break;
                 }
+                if (sig == SIGUSR2 && !images.empty()) {
+
+                    i = (i + images.size() - 1) % images.size() - 1;
+                }
                 if (images.size() != size && size != 0) {
                     images = getImages(std::span<const char* const>(argv + 2, static_cast<std::size_t>(argc - 2)));
                 }
