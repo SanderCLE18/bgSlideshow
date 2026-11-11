@@ -255,6 +255,7 @@ int main(int argc, char** argv) {
     sigaddset(&sigs, SIGINT);
     sigaddset(&sigs, SIGTERM);
     sigaddset(&sigs, SIGUSR1);
+    sigaddset(&sigs, SIGUSR2);
 
     struct sigaction ign{};
     ign.sa_handler = SIG_IGN;
