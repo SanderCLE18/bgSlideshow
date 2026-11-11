@@ -254,6 +254,7 @@ int main(int argc, char** argv) {
     sigemptyset(&sigs);
     sigaddset(&sigs, SIGINT);
     sigaddset(&sigs, SIGTERM);
+    sigaddset(&sigs, SIGUSR1);
 
     struct sigaction ign{};
     ign.sa_handler = SIG_IGN;
@@ -303,7 +304,7 @@ int main(int argc, char** argv) {
 
                 while ((sig = sigtimedwait(&sigs, nullptr, &interval)) == -1 && errno == EINTR) { }
 
-                if (sig > 0) {
+                if (sig == SIGINT || sig == SIGTERM) {
                     break;
                 }
                 if (images.size() != size && size != 0) {
@@ -317,7 +318,7 @@ int main(int argc, char** argv) {
                     }
                 }
             }
-            if (sig > 0) {
+            if (sig == SIGINT || sig == SIGTERM) {
                 break;
             }
             images = getImages(std::span<const char* const>(argv + 2, static_cast<std::size_t>(argc - 2)));
