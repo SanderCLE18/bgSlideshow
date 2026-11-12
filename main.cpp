@@ -256,7 +256,7 @@ int main(int argc, char** argv) {
     sigaddset(&sigs, SIGTERM);
     sigaddset(&sigs, SIGUSR1);
     sigaddset(&sigs, SIGUSR2);
-
+    sigaddset(&sigs, SIGRTMIN);
     struct sigaction ign{};
     ign.sa_handler = SIG_IGN;
     sigemptyset(&ign.sa_mask);
@@ -280,6 +280,7 @@ int main(int argc, char** argv) {
         RestoreImage guard;
         setClionOpaque(true);
         int sig = 0;
+        bool paused = false;
         while (running_) {
 
             for (std::size_t i = 0;i < images.size(); i++){
@@ -302,16 +303,27 @@ int main(int argc, char** argv) {
                         std::println(stderr, "could not restore! Error: {}", e.what());
                     }
                 }
+                for (;;) {
+                    sig = paused
+                        ? sigwaitinfo(&sigs, nullptr)
+                        : sigtimedwait(&sigs, nullptr, &interval);
 
-                while ((sig = sigtimedwait(&sigs, nullptr, &interval)) == -1 && errno == EINTR) { }
-
+                    if (sig == -1 && errno == EINTR) {
+                        continue;
+                    }
+                    if (sig == SIGRTMIN) {
+                        paused = !paused;
+                        continue;
+                    }
+                    break;
+                }
                 if (sig == SIGINT || sig == SIGTERM) {
                     break;
                 }
                 if (sig == SIGUSR2 && !images.empty()) {
-
                     i = (i + images.size() - 1) % images.size() - 1;
                 }
+
                 if (images.size() != size && size != 0) {
                     images = getImages(std::span<const char* const>(argv + 2, static_cast<std::size_t>(argc - 2)));
                 }
